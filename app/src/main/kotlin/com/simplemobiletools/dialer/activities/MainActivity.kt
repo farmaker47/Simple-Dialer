@@ -41,9 +41,12 @@ class MainActivity : SimpleActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
         appLaunched(BuildConfig.APPLICATION_ID)
         setupTabColors()
 
+        // Check for the default dialer
+        // and for read contact permissions
         if (isDefaultDialer()) {
             checkContactPermissions()
         } else {
@@ -112,7 +115,7 @@ class MainActivity : SimpleActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
         super.onActivityResult(requestCode, resultCode, resultData)
-        // we dont really care about the result, the app can work without being the default Dialer too
+        // we don't really care about the result, the app can work without being the default Dialer too
         if (requestCode == REQUEST_CODE_SET_DEFAULT_DIALER) {
             checkContactPermissions()
         }
