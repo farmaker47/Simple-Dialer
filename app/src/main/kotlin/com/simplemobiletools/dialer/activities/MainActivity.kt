@@ -49,6 +49,7 @@ class MainActivity : SimpleActivity() {
         } else {
             launchSetDefaultDialerIntent()
         }
+
     }
 
     override fun onResume() {
