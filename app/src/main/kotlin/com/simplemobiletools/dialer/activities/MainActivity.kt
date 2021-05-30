@@ -57,7 +57,10 @@ class MainActivity : SimpleActivity() {
     override fun onResume() {
         super.onResume()
         val adjustedPrimaryColor = getAdjustedPrimaryColor()
-        val dialpadIcon = resources.getColoredDrawableWithColor(R.drawable.ic_dialpad_vector, adjustedPrimaryColor.getContrastColor())
+        val dialpadIcon = resources.getColoredDrawableWithColor(
+            R.drawable.ic_dialpad_vector,
+            adjustedPrimaryColor.getContrastColor()
+        )
         main_dialpad_button.apply {
             setImageDrawable(dialpadIcon)
             background.applyColorFilter(adjustedPrimaryColor)
@@ -71,7 +74,9 @@ class MainActivity : SimpleActivity() {
                 main_tabs_holder.getTabAt(it)?.icon?.applyColorFilter(config.textColor)
             }
 
-            main_tabs_holder.getTabAt(viewpager.currentItem)?.icon?.applyColorFilter(adjustedPrimaryColor)
+            main_tabs_holder.getTabAt(viewpager.currentItem)?.icon?.applyColorFilter(
+                adjustedPrimaryColor
+            )
             getAllFragments().forEach {
                 it?.setupColors(config.textColor, config.primaryColor, getAdjustedPrimaryColor())
             }
@@ -82,6 +87,7 @@ class MainActivity : SimpleActivity() {
         }
 
         checkShortcuts()
+
         Handler().postDelayed({
             recents_fragment?.refreshItems()
         }, 2000)
@@ -151,20 +157,22 @@ class MainActivity : SimpleActivity() {
             })
         }
 
-        MenuItemCompat.setOnActionExpandListener(searchMenuItem, object : MenuItemCompat.OnActionExpandListener {
-            override fun onMenuItemActionExpand(item: MenuItem?): Boolean {
-                isSearchOpen = true
-                main_dialpad_button.beGone()
-                return true
-            }
+        MenuItemCompat.setOnActionExpandListener(
+            searchMenuItem,
+            object : MenuItemCompat.OnActionExpandListener {
+                override fun onMenuItemActionExpand(item: MenuItem?): Boolean {
+                    isSearchOpen = true
+                    main_dialpad_button.beGone()
+                    return true
+                }
 
-            override fun onMenuItemActionCollapse(item: MenuItem?): Boolean {
-                getCurrentFragment()?.onSearchClosed()
-                isSearchOpen = false
-                main_dialpad_button.beVisible()
-                return true
-            }
-        })
+                override fun onMenuItemActionCollapse(item: MenuItem?): Boolean {
+                    getCurrentFragment()?.onSearchClosed()
+                    isSearchOpen = false
+                    main_dialpad_button.beVisible()
+                    return true
+                }
+            })
     }
 
     private fun clearCallHistory() {
@@ -195,7 +203,8 @@ class MainActivity : SimpleActivity() {
     private fun getLaunchDialpadShortcut(appIconColor: Int): ShortcutInfo {
         val newEvent = getString(R.string.dialpad)
         val drawable = resources.getDrawable(R.drawable.shortcut_dialpad)
-        (drawable as LayerDrawable).findDrawableByLayerId(R.id.shortcut_dialpad_background).applyColorFilter(appIconColor)
+        (drawable as LayerDrawable).findDrawableByLayerId(R.id.shortcut_dialpad_background)
+            .applyColorFilter(appIconColor)
         val bmp = drawable.convertToBitmap()
 
         val intent = Intent(this, DialpadActivity::class.java)
@@ -222,7 +231,8 @@ class MainActivity : SimpleActivity() {
         }
     }
 
-    private fun getInactiveTabIndexes(activeIndex: Int) = (0 until tabsList.size).filter { it != activeIndex }
+    private fun getInactiveTabIndexes(activeIndex: Int) =
+        (0 until tabsList.size).filter { it != activeIndex }
 
     private fun initFragments() {
         viewpager.offscreenPageLimit = 2
@@ -231,7 +241,12 @@ class MainActivity : SimpleActivity() {
                 searchMenuItem?.collapseActionView()
             }
 
-            override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {}
+            override fun onPageScrolled(
+                position: Int,
+                positionOffset: Float,
+                positionOffsetPixels: Int
+            ) {
+            }
 
             override fun onPageSelected(position: Int) {
                 main_tabs_holder.getTabAt(position)?.select()
@@ -316,7 +331,11 @@ class MainActivity : SimpleActivity() {
         recents_fragment?.refreshItems()
     }
 
-    private fun getAllFragments() = arrayListOf(contacts_fragment, favorites_fragment, recents_fragment).toMutableList() as ArrayList<MyViewPagerFragment?>
+    private fun getAllFragments() = arrayListOf(
+        contacts_fragment,
+        favorites_fragment,
+        recents_fragment
+    ).toMutableList() as ArrayList<MyViewPagerFragment?>
 
     private fun getCurrentFragment(): MyViewPagerFragment? = when (viewpager.currentItem) {
         0 -> contacts_fragment
