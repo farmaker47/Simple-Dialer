@@ -13,6 +13,7 @@ import android.os.PowerManager
 import android.provider.MediaStore
 import android.telecom.Call
 import android.telecom.CallAudioState
+import android.util.Log
 import android.util.Size
 import android.view.WindowManager
 import android.widget.RemoteViews
@@ -29,9 +30,13 @@ import com.simplemobiletools.dialer.helpers.CallManager
 import com.simplemobiletools.dialer.helpers.DECLINE_CALL
 import com.simplemobiletools.dialer.models.CallContact
 import com.simplemobiletools.dialer.receivers.CallActionReceiver
+import com.simplemobiletools.dialer.viewmodels.CallActivityViewModel
 import kotlinx.android.synthetic.main.activity_call.*
 import kotlinx.android.synthetic.main.dialpad.*
 import java.util.*
+import org.koin.android.viewmodel.ext.android.viewModel
+import androidx.lifecycle.Observer
+import com.simplemobiletools.dialer.activities.MainActivity.Companion.MINIMUM_TIME_BETWEEN_SAMPLES_MS
 
 class CallActivity : SimpleActivity() {
     private val CALL_NOTIFICATION_ID = 1
@@ -44,6 +49,10 @@ class CallActivity : SimpleActivity() {
     private var callContactAvatar: Bitmap? = null
     private var proximityWakeLock: PowerManager.WakeLock? = null
     private var callTimer = Timer()
+    private var labels: ArrayList<String> = ArrayList()
+
+    // Koin DI
+    private val viewModel: CallActivityViewModel by viewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         supportActionBar?.hide()
@@ -51,6 +60,7 @@ class CallActivity : SimpleActivity() {
         setContentView(R.layout.activity_call)
 
         updateTextColors(call_holder)
+        // Init and set the click listeners
         initButtons()
 
         audioManager.mode = AudioManager.MODE_IN_CALL
@@ -69,6 +79,89 @@ class CallActivity : SimpleActivity() {
 
         CallManager.registerCallback(callCallback)
         updateCallState(CallManager.getState())
+
+        // Observe values of viewmodel
+        observeViewmodel()
+    }
+
+    private fun observeViewmodel() {
+
+        // Labels
+        viewModel.labels.observe(this, { labelsCommands ->
+                if (labelsCommands != null) {
+                    labels = labelsCommands
+                    Log.v(MainActivity.LOG_TAG, labels.toArray().contentToString())
+                }
+            }
+        )
+
+        // Result
+        viewModel.result.observe(
+            this,
+            Observer { result ->
+                if (result != null) {
+
+                    runOnUiThread(
+                        Runnable {
+
+                            // If we do have a new command, highlight the right list entry.
+                            if (!result.foundCommand.startsWith("_") && result.isNewCommand) {
+                                var labelIndex = -1
+                                for (i in labels.indices) {
+                                    if (labels.get(i) == result.foundCommand) {
+                                        labelIndex = i
+                                    }
+                                }
+                                when (labelIndex - 2) {
+                                    0 -> Log.v(MainActivity.LOG_TAG_RESULT, "YES")//selectedTextView = bindingActivitySpeechBinding.yes
+                                    1 -> Log.v(MainActivity.LOG_TAG_RESULT, "NO")//selectedTextView = bindingActivitySpeechBinding.no
+                                    2 -> Log.v(MainActivity.LOG_TAG_RESULT, "UP")//selectedTextView = bindingActivitySpeechBinding.up
+                                    3 -> Log.v(MainActivity.LOG_TAG_RESULT, "DOWN")//selectedTextView = bindingActivitySpeechBinding.down
+                                    4 -> Log.v(MainActivity.LOG_TAG_RESULT, "LEFT")//selectedTextView = bindingActivitySpeechBinding.left
+                                    5 -> Log.v(MainActivity.LOG_TAG_RESULT, "RIGHT")//selectedTextView = bindingActivitySpeechBinding.right
+                                    6 -> Log.v(MainActivity.LOG_TAG_RESULT, "ON")//selectedTextView = bindingActivitySpeechBinding.on
+                                    7 -> Log.v(MainActivity.LOG_TAG_RESULT, "OFF")//selectedTextView = bindingActivitySpeechBinding.off
+                                    8 -> Log.v(MainActivity.LOG_TAG_RESULT, "STOP")//selectedTextView = bindingActivitySpeechBinding.stop
+                                    9 -> Log.v(MainActivity.LOG_TAG_RESULT, "GO")//selectedTextView = bindingActivitySpeechBinding.go
+                                }
+                                /*if (selectedTextView != null) {
+                                    selectedTextView?.setBackgroundResource(R.drawable.round_corner_text_bg_selected)
+                                    val score =
+                                        Math.round(result.score * 100).toString() + "%"
+                                    selectedTextView?.setText(
+                                        selectedTextView?.text.toString() + "\n" + score
+                                    )
+                                    selectedTextView?.setTextColor(
+                                        resources.getColor(android.R.color.holo_orange_light)
+                                    )
+                                    handler.postDelayed(
+                                        Runnable {
+                                            val origionalString: String =
+                                                selectedTextView?.getText().toString()
+                                                    .replace(score, "").trim({ it <= ' ' })
+                                            selectedTextView?.text = origionalString
+                                            selectedTextView?.setBackgroundResource(
+                                                R.drawable.round_corner_text_bg_unselected
+                                            )
+                                            selectedTextView?.setTextColor(
+                                                resources.getColor(android.R.color.black)
+                                            )
+                                        },
+                                        750
+                                    )
+                                }*/
+                            }
+                        })
+                    try {
+                        // We don't need to run too frequently, so snooze for a bit.
+                        Thread.sleep(MINIMUM_TIME_BETWEEN_SAMPLES_MS)
+                    } catch (e: InterruptedException) {
+                        // Ignore
+                    }
+
+                }
+            }
+        )
     }
 
     override fun onDestroy() {
@@ -81,6 +174,18 @@ class CallActivity : SimpleActivity() {
         }
 
         endCall()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.startRecording()
+        viewModel.startRecognition()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.stopRecording()
+        viewModel.stopRecognition()
     }
 
     override fun onBackPressed() {
@@ -141,7 +246,13 @@ class CallActivity : SimpleActivity() {
         dialpad_hashtag_holder.setOnClickListener { dialpadPressed('#') }
 
         dialpad_wrapper.setBackgroundColor(config.backgroundColor)
-        arrayOf(call_toggle_microphone, call_toggle_speaker, call_dialpad, dialpad_close, call_sim_image).forEach {
+        arrayOf(
+            call_toggle_microphone,
+            call_toggle_speaker,
+            call_dialpad,
+            dialpad_close,
+            call_sim_image
+        ).forEach {
             it.applyColorFilter(config.textColor)
         }
 
@@ -155,17 +266,20 @@ class CallActivity : SimpleActivity() {
 
     private fun toggleSpeaker() {
         isSpeakerOn = !isSpeakerOn
-        val drawable = if (isSpeakerOn) R.drawable.ic_speaker_on_vector else R.drawable.ic_speaker_off_vector
+        val drawable =
+            if (isSpeakerOn) R.drawable.ic_speaker_on_vector else R.drawable.ic_speaker_off_vector
         call_toggle_speaker.setImageDrawable(getDrawable(drawable))
         audioManager.isSpeakerphoneOn = isSpeakerOn
 
-        val newRoute = if (isSpeakerOn) CallAudioState.ROUTE_SPEAKER else CallAudioState.ROUTE_EARPIECE
+        val newRoute =
+            if (isSpeakerOn) CallAudioState.ROUTE_SPEAKER else CallAudioState.ROUTE_EARPIECE
         CallManager.inCallService?.setAudioRoute(newRoute)
     }
 
     private fun toggleMicrophone() {
         isMicrophoneOn = !isMicrophoneOn
-        val drawable = if (isMicrophoneOn) R.drawable.ic_microphone_vector else R.drawable.ic_microphone_off_vector
+        val drawable =
+            if (isMicrophoneOn) R.drawable.ic_microphone_vector else R.drawable.ic_microphone_off_vector
         call_toggle_microphone.setImageDrawable(getDrawable(drawable))
         audioManager.isMicrophoneMute = !isMicrophoneOn
         CallManager.inCallService?.setMuted(!isMicrophoneOn)
@@ -184,7 +298,8 @@ class CallActivity : SimpleActivity() {
             return
         }
 
-        caller_name_label.text = if (callContact!!.name.isNotEmpty()) callContact!!.name else getString(R.string.unknown_caller)
+        caller_name_label.text =
+            if (callContact!!.name.isNotEmpty()) callContact!!.name else getString(R.string.unknown_caller)
         if (callContact!!.number.isNotEmpty() && callContact!!.number != callContact!!.name) {
             caller_number_label.text = callContact!!.number
         } else {
@@ -290,7 +405,8 @@ class CallActivity : SimpleActivity() {
         isCallEnded = true
         if (callDuration > 0) {
             runOnUiThread {
-                call_status_label.text = "${callDuration.getFormattedDuration()} (${getString(R.string.call_ended)})"
+                call_status_label.text =
+                    "${callDuration.getFormattedDuration()} (${getString(R.string.call_ended)})"
                 Handler().postDelayed({
                     finish()
                 }, 3000)
@@ -329,7 +445,10 @@ class CallActivity : SimpleActivity() {
         }
 
         if (isOreoPlus()) {
-            (getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).requestDismissKeyguard(this, null)
+            (getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).requestDismissKeyguard(
+                this,
+                null
+            )
         } else {
             window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
         }
@@ -338,7 +457,10 @@ class CallActivity : SimpleActivity() {
     private fun initProximitySensor() {
         if (proximityWakeLock == null || proximityWakeLock?.isHeld == false) {
             val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-            proximityWakeLock = powerManager.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "com.simplemobiletools.dialer.pro:wake_lock")
+            proximityWakeLock = powerManager.newWakeLock(
+                PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
+                "com.simplemobiletools.dialer.pro:wake_lock"
+            )
             proximityWakeLock!!.acquire(10 * MINUTE_SECONDS * 1000L)
         }
     }
@@ -363,13 +485,22 @@ class CallActivity : SimpleActivity() {
 
         val acceptCallIntent = Intent(this, CallActionReceiver::class.java)
         acceptCallIntent.action = ACCEPT_CALL
-        val acceptPendingIntent = PendingIntent.getBroadcast(this, 0, acceptCallIntent, PendingIntent.FLAG_CANCEL_CURRENT)
+        val acceptPendingIntent =
+            PendingIntent.getBroadcast(this, 0, acceptCallIntent, PendingIntent.FLAG_CANCEL_CURRENT)
 
         val declineCallIntent = Intent(this, CallActionReceiver::class.java)
         declineCallIntent.action = DECLINE_CALL
-        val declinePendingIntent = PendingIntent.getBroadcast(this, 1, declineCallIntent, PendingIntent.FLAG_CANCEL_CURRENT)
+        val declinePendingIntent = PendingIntent.getBroadcast(
+            this,
+            1,
+            declineCallIntent,
+            PendingIntent.FLAG_CANCEL_CURRENT
+        )
 
-        val callerName = if (callContact != null && callContact!!.name.isNotEmpty()) callContact!!.name else getString(R.string.unknown_caller)
+        val callerName =
+            if (callContact != null && callContact!!.name.isNotEmpty()) callContact!!.name else getString(
+                R.string.unknown_caller
+            )
         val contentTextId = when (callState) {
             Call.STATE_RINGING -> R.string.is_calling
             Call.STATE_DIALING -> R.string.dialing
@@ -387,7 +518,10 @@ class CallActivity : SimpleActivity() {
             setOnClickPendingIntent(R.id.notification_accept_call, acceptPendingIntent)
 
             if (callContactAvatar != null) {
-                setImageViewBitmap(R.id.notification_thumbnail, getCircularBitmap(callContactAvatar!!))
+                setImageViewBitmap(
+                    R.id.notification_thumbnail,
+                    getCircularBitmap(callContactAvatar!!)
+                )
             }
         }
 

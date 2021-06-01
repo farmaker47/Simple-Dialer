@@ -364,4 +364,21 @@ class MainActivity : SimpleActivity() {
 
         startAboutActivity(R.string.app_name, licenses, BuildConfig.VERSION_NAME, faqItems, true)
     }
+
+    companion object{
+        const val SAMPLE_RATE = 16000
+        const val SAMPLE_DURATION_MS = 1000
+        const val RECORDING_LENGTH = (SAMPLE_RATE * SAMPLE_DURATION_MS / 1000)
+        const val AVERAGE_WINDOW_DURATION_MS: Long = 1000
+        const val DETECTION_THRESHOLD = 0.50f
+        const val SUPPRESSION_MS = 1500
+        const val MINIMUM_COUNT = 3
+        const val MINIMUM_TIME_BETWEEN_SAMPLES_MS: Long = 30
+        const val LABEL_FILENAME = "conv_actions_labels.txt"
+        const val MODEL_FILENAME = "conv_actions_frozen.tflite"
+
+        // UI elements.
+        val LOG_TAG: String = "Simple_Dialer"
+        val LOG_TAG_RESULT: String = "Result_of_recognition"
+    }
 }

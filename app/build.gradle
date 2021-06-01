@@ -52,9 +52,34 @@ android {
         checkReleaseBuilds false
         abortOnError false
     }
+
+    aaptOptions {
+        noCompress "tflite"
+    }
 }
 
 dependencies {
     implementation 'com.github.SimpleMobileTools:Simple-Commons:ee14aec731'
     implementation 'com.github.tibbi:IndicatorFastScroll:c3de1d040a'
+
+    // Koin for Kotlin
+    def koin_version = '2.1.5'
+    implementation "org.koin:koin-core:$koin_version"
+    // Koin for Android
+    implementation "org.koin:koin-android:$koin_version"
+    // Koin Android Scope features
+    implementation "org.koin:koin-android-scope:$koin_version"
+    // Koin Android ViewModel features
+    implementation "org.koin:koin-android-viewmodel:$koin_version"
+
+    // TF-Lite
+    implementation 'org.tensorflow:tensorflow-lite:2.5.0'
+
+    // Coroutines
+    def version_kotlin_coroutines = "1.4.1"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_kotlin_coroutines"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$version_kotlin_coroutines"
+    // For viewmodelscope
+    def lifecycle_version_viewmodelscope = "2.4.0-alpha01"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version_viewmodelscope"
 }
