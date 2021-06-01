@@ -101,7 +101,7 @@ class RecognizeCommands(contxt: Context) {
     fun processLatestResults(
         currentResults: FloatArray,
         currentTimeMS: Long
-    ): RecognitionResult? {
+    ): RecognitionResult {
 
         if (currentResults.size != labels.size) {
             throw RuntimeException(

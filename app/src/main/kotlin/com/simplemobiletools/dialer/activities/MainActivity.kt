@@ -377,7 +377,7 @@ class MainActivity : SimpleActivity() {
         const val LABEL_FILENAME = "conv_actions_labels.txt"
         const val MODEL_FILENAME = "conv_actions_frozen.tflite"
 
-        // UI elements.
+        // Log tags
         val LOG_TAG: String = "Simple_Dialer"
         val LOG_TAG_RESULT: String = "Result_of_recognition"
     }

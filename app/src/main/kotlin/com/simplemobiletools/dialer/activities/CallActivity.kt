@@ -37,6 +37,7 @@ import java.util.*
 import org.koin.android.viewmodel.ext.android.viewModel
 import androidx.lifecycle.Observer
 import com.simplemobiletools.dialer.activities.MainActivity.Companion.MINIMUM_TIME_BETWEEN_SAMPLES_MS
+import kotlin.math.roundToInt
 
 class CallActivity : SimpleActivity() {
     private val CALL_NOTIFICATION_ID = 1
@@ -88,70 +89,127 @@ class CallActivity : SimpleActivity() {
 
         // Labels
         viewModel.labels.observe(this, { labelsCommands ->
-                if (labelsCommands != null) {
-                    labels = labelsCommands
-                    Log.v(MainActivity.LOG_TAG, labels.toArray().contentToString())
-                }
+            if (labelsCommands != null) {
+                labels = labelsCommands
+                Log.v(MainActivity.LOG_TAG, labels.toArray().contentToString())
             }
+        }
         )
 
         // Result
         viewModel.result.observe(
             this,
-            Observer { result ->
+            { result ->
                 if (result != null) {
-
-                    runOnUiThread(
-                        Runnable {
-
-                            // If we do have a new command, highlight the right list entry.
-                            if (!result.foundCommand.startsWith("_") && result.isNewCommand) {
-                                var labelIndex = -1
-                                for (i in labels.indices) {
-                                    if (labels.get(i) == result.foundCommand) {
-                                        labelIndex = i
-                                    }
+                    runOnUiThread {
+                        // If we do have a new command, highlight the right list entry.
+                        if (!result.foundCommand.startsWith("_") && result.isNewCommand) {
+                            var labelIndex = -1
+                            for (i in labels.indices) {
+                                if (labels.get(i) == result.foundCommand) {
+                                    labelIndex = i
                                 }
-                                when (labelIndex - 2) {
-                                    0 -> Log.v(MainActivity.LOG_TAG_RESULT, "YES")//selectedTextView = bindingActivitySpeechBinding.yes
-                                    1 -> Log.v(MainActivity.LOG_TAG_RESULT, "NO")//selectedTextView = bindingActivitySpeechBinding.no
-                                    2 -> Log.v(MainActivity.LOG_TAG_RESULT, "UP")//selectedTextView = bindingActivitySpeechBinding.up
-                                    3 -> Log.v(MainActivity.LOG_TAG_RESULT, "DOWN")//selectedTextView = bindingActivitySpeechBinding.down
-                                    4 -> Log.v(MainActivity.LOG_TAG_RESULT, "LEFT")//selectedTextView = bindingActivitySpeechBinding.left
-                                    5 -> Log.v(MainActivity.LOG_TAG_RESULT, "RIGHT")//selectedTextView = bindingActivitySpeechBinding.right
-                                    6 -> Log.v(MainActivity.LOG_TAG_RESULT, "ON")//selectedTextView = bindingActivitySpeechBinding.on
-                                    7 -> Log.v(MainActivity.LOG_TAG_RESULT, "OFF")//selectedTextView = bindingActivitySpeechBinding.off
-                                    8 -> Log.v(MainActivity.LOG_TAG_RESULT, "STOP")//selectedTextView = bindingActivitySpeechBinding.stop
-                                    9 -> Log.v(MainActivity.LOG_TAG_RESULT, "GO")//selectedTextView = bindingActivitySpeechBinding.go
-                                }
-                                /*if (selectedTextView != null) {
-                                    selectedTextView?.setBackgroundResource(R.drawable.round_corner_text_bg_selected)
-                                    val score =
-                                        Math.round(result.score * 100).toString() + "%"
-                                    selectedTextView?.setText(
-                                        selectedTextView?.text.toString() + "\n" + score
-                                    )
-                                    selectedTextView?.setTextColor(
-                                        resources.getColor(android.R.color.holo_orange_light)
-                                    )
-                                    handler.postDelayed(
-                                        Runnable {
-                                            val origionalString: String =
-                                                selectedTextView?.getText().toString()
-                                                    .replace(score, "").trim({ it <= ' ' })
-                                            selectedTextView?.text = origionalString
-                                            selectedTextView?.setBackgroundResource(
-                                                R.drawable.round_corner_text_bg_unselected
-                                            )
-                                            selectedTextView?.setTextColor(
-                                                resources.getColor(android.R.color.black)
-                                            )
-                                        },
-                                        750
-                                    )
-                                }*/
                             }
-                        })
+                            val score = (result.score * 100).roundToInt().toString() + "%"
+                            when (labelIndex - 2) {
+                                0 -> {
+                                    Log.v(
+                                        MainActivity.LOG_TAG_RESULT,
+                                        "YES $score"
+                                    )
+                                    // Accept call
+                                    acceptCall()
+
+                                }
+                                1 -> {
+                                    Log.v(
+                                        MainActivity.LOG_TAG_RESULT,
+                                        "NO $score"
+                                    )
+                                }
+                                2 -> {
+                                    Log.v(
+                                        MainActivity.LOG_TAG_RESULT,
+                                        "UP $score"
+                                    )
+                                }
+                                3 -> {
+                                    Log.v(
+                                        MainActivity.LOG_TAG_RESULT,
+                                        "DOWN $score"
+                                    )
+                                }
+                                4 -> {
+                                    Log.v(
+                                        MainActivity.LOG_TAG_RESULT,
+                                        "LEFT $score"
+                                    )
+                                }
+                                5 -> {
+                                    Log.v(
+                                        MainActivity.LOG_TAG_RESULT,
+                                        "RIGHT $score"
+                                    )
+                                }
+                                6 -> {
+                                    Log.v(
+                                        MainActivity.LOG_TAG_RESULT,
+                                        "ON $score"
+                                    )
+                                    // Toggle Speaker
+                                    toggleSpeaker()
+                                }
+                                7 -> {
+                                    Log.v(
+                                        MainActivity.LOG_TAG_RESULT,
+                                        "OFF $score"
+                                    )
+                                    // Toggle Speaker
+                                    toggleSpeaker()
+                                }
+                                8 -> {
+                                    Log.v(
+                                        MainActivity.LOG_TAG_RESULT,
+                                        "STOP $score"
+                                    )
+                                    // Decline call
+                                    endCall()
+                                }
+                                9 -> {
+                                    Log.v(
+                                        MainActivity.LOG_TAG_RESULT,
+                                        "GO $score"
+                                    )
+                                }
+                            }
+                            /*if (selectedTextView != null) {
+                                selectedTextView?.setBackgroundResource(R.drawable.round_corner_text_bg_selected)
+                                val score =
+                                    Math.round(result.score * 100).toString() + "%"
+                                selectedTextView?.setText(
+                                    selectedTextView?.text.toString() + "\n" + score
+                                )
+                                selectedTextView?.setTextColor(
+                                    resources.getColor(android.R.color.holo_orange_light)
+                                )
+                                handler.postDelayed(
+                                    Runnable {
+                                        val origionalString: String =
+                                            selectedTextView?.getText().toString()
+                                                .replace(score, "").trim({ it <= ' ' })
+                                        selectedTextView?.text = origionalString
+                                        selectedTextView?.setBackgroundResource(
+                                            R.drawable.round_corner_text_bg_unselected
+                                        )
+                                        selectedTextView?.setTextColor(
+                                            resources.getColor(android.R.color.black)
+                                        )
+                                    },
+                                    750
+                                )
+                            }*/
+                        }
+                    }
                     try {
                         // We don't need to run too frequently, so snooze for a bit.
                         Thread.sleep(MINIMUM_TIME_BETWEEN_SAMPLES_MS)
