@@ -11,16 +11,20 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.PowerManager
 import android.provider.MediaStore
+import android.speech.tts.TextToSpeech
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.util.Log
 import android.util.Size
 import android.view.WindowManager
 import android.widget.RemoteViews
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.lifecycleScope
 import com.simplemobiletools.commons.extensions.*
 import com.simplemobiletools.commons.helpers.*
 import com.simplemobiletools.dialer.R
+import com.simplemobiletools.dialer.activities.MainActivity.Companion.MINIMUM_TIME_BETWEEN_SAMPLES_MS
 import com.simplemobiletools.dialer.extensions.addCharacter
 import com.simplemobiletools.dialer.extensions.audioManager
 import com.simplemobiletools.dialer.extensions.config
@@ -33,13 +37,15 @@ import com.simplemobiletools.dialer.receivers.CallActionReceiver
 import com.simplemobiletools.dialer.viewmodels.CallActivityViewModel
 import kotlinx.android.synthetic.main.activity_call.*
 import kotlinx.android.synthetic.main.dialpad.*
-import java.util.*
+import kotlinx.android.synthetic.main.fragment_recents.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.android.viewmodel.ext.android.viewModel
-import androidx.lifecycle.Observer
-import com.simplemobiletools.dialer.activities.MainActivity.Companion.MINIMUM_TIME_BETWEEN_SAMPLES_MS
+import java.util.*
 import kotlin.math.roundToInt
 
-class CallActivity : SimpleActivity() {
+
+class CallActivity : SimpleActivity(), TextToSpeech.OnInitListener {
     private val CALL_NOTIFICATION_ID = 1
 
     private var isSpeakerOn = false
@@ -51,6 +57,7 @@ class CallActivity : SimpleActivity() {
     private var proximityWakeLock: PowerManager.WakeLock? = null
     private var callTimer = Timer()
     private var labels: ArrayList<String> = ArrayList()
+    private lateinit var textToSpeech: TextToSpeech
 
     // Koin DI
     private val viewModel: CallActivityViewModel by viewModel()
@@ -83,6 +90,11 @@ class CallActivity : SimpleActivity() {
 
         // Observe values of viewmodel
         observeViewmodel()
+
+        // Init text to speech
+        textToSpeech = TextToSpeech(
+            this, this
+        )
     }
 
     private fun observeViewmodel() {
@@ -241,6 +253,8 @@ class CallActivity : SimpleActivity() {
     }
 
     override fun onPause() {
+        textToSpeech.stop()
+        textToSpeech.shutdown()
         super.onPause()
         viewModel.stopRecording()
         viewModel.stopRecognition()
@@ -356,8 +370,9 @@ class CallActivity : SimpleActivity() {
             return
         }
 
-        caller_name_label.text =
-            if (callContact!!.name.isNotEmpty()) callContact!!.name else getString(R.string.unknown_caller)
+        // Caller name
+        caller_name_label.text = if (callContact!!.name.isNotEmpty()) callContact!!.name else getString(R.string.unknown_caller)
+
         if (callContact!!.number.isNotEmpty() && callContact!!.number != callContact!!.name) {
             caller_number_label.text = callContact!!.number
         } else {
@@ -635,5 +650,26 @@ class CallActivity : SimpleActivity() {
         paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
         canvas.drawBitmap(bitmap, rect, rect, paint)
         return output
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            val result: Int = textToSpeech.setLanguage(Locale.getDefault())
+            if (result == TextToSpeech.LANG_MISSING_DATA
+                || result == TextToSpeech.LANG_NOT_SUPPORTED
+            ) {
+                Toast.makeText(applicationContext, "Language not supported", Toast.LENGTH_SHORT)
+                    .show()
+            }
+
+            // Wait 4 seconds to tell the name
+            lifecycleScope.launch {
+                delay(4000L)
+                textToSpeech.speak(caller_name_label.text.toString(), TextToSpeech.QUEUE_FLUSH, null, null)
+            }
+
+        } else {
+            Toast.makeText(applicationContext, "Init failed", Toast.LENGTH_SHORT).show()
+        }
     }
 }

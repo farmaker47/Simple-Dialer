@@ -77,9 +77,10 @@ dependencies {
 
     // Coroutines
     def version_kotlin_coroutines = "1.4.1"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_kotlin_coroutines"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$version_kotlin_coroutines"
-    // For viewmodelscope
-    def lifecycle_version_viewmodelscope = "2.4.0-alpha01"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version_viewmodelscope"
+    //implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$version_kotlin_coroutines"
+    //implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$version_kotlin_coroutines"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.3.1"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.3.1"
+
 }
