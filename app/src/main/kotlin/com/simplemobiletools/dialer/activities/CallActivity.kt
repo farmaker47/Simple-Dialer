@@ -22,7 +22,10 @@ import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.lifecycleScope
 import com.simplemobiletools.commons.extensions.*
-import com.simplemobiletools.commons.helpers.*
+import com.simplemobiletools.commons.helpers.MINUTE_SECONDS
+import com.simplemobiletools.commons.helpers.isOreoMr1Plus
+import com.simplemobiletools.commons.helpers.isOreoPlus
+import com.simplemobiletools.commons.helpers.isQPlus
 import com.simplemobiletools.dialer.R
 import com.simplemobiletools.dialer.activities.MainActivity.Companion.MINIMUM_TIME_BETWEEN_SAMPLES_MS
 import com.simplemobiletools.dialer.extensions.addCharacter
@@ -37,7 +40,6 @@ import com.simplemobiletools.dialer.receivers.CallActionReceiver
 import com.simplemobiletools.dialer.viewmodels.CallActivityViewModel
 import kotlinx.android.synthetic.main.activity_call.*
 import kotlinx.android.synthetic.main.dialpad.*
-import kotlinx.android.synthetic.main.fragment_recents.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.viewmodel.ext.android.viewModel
@@ -371,7 +373,8 @@ class CallActivity : SimpleActivity(), TextToSpeech.OnInitListener {
         }
 
         // Caller name
-        caller_name_label.text = if (callContact!!.name.isNotEmpty()) callContact!!.name else getString(R.string.unknown_caller)
+        caller_name_label.text =
+            if (callContact!!.name.isNotEmpty()) callContact!!.name else getString(R.string.unknown_caller)
 
         if (callContact!!.number.isNotEmpty() && callContact!!.number != callContact!!.name) {
             caller_number_label.text = callContact!!.number
@@ -652,24 +655,46 @@ class CallActivity : SimpleActivity(), TextToSpeech.OnInitListener {
         return output
     }
 
-    override fun onInit(status: Int) {
-        if (status == TextToSpeech.SUCCESS) {
-            val result: Int = textToSpeech.setLanguage(Locale.getDefault())
-            if (result == TextToSpeech.LANG_MISSING_DATA
-                || result == TextToSpeech.LANG_NOT_SUPPORTED
-            ) {
-                Toast.makeText(applicationContext, "Language not supported", Toast.LENGTH_SHORT)
-                    .show()
-            }
-
-            // Wait 4 seconds to tell the name
-            lifecycleScope.launch {
-                delay(4000L)
-                textToSpeech.speak(caller_name_label.text.toString(), TextToSpeech.QUEUE_FLUSH, null, null)
-            }
-
-        } else {
-            Toast.makeText(applicationContext, "Init failed", Toast.LENGTH_SHORT).show()
+    override fun onInit(status: Int) = if (status == TextToSpeech.SUCCESS) {
+        val result: Int = textToSpeech.setLanguage(Locale.getDefault())
+        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED
+        ) {
+            Toast.makeText(applicationContext, "Language not supported", Toast.LENGTH_SHORT).show()
         }
+
+        // Wait 2 seconds to tell the first name
+        // Add some silence between the names
+        val arrayOfStrings = arrayOf(
+            caller_name_label.text.toString(),
+            caller_name_label.text.toString(),
+            caller_name_label.text.toString()
+        )
+        var i = 0
+        for (name in arrayOfStrings) {
+
+            lifecycleScope.launch {
+                delay(3000L)
+
+                textToSpeech.speak(arrayOfStrings[i], TextToSpeech.QUEUE_ADD, null, null)
+                textToSpeech.playSilentUtterance(2000L, TextToSpeech.QUEUE_ADD, null);
+
+                i += 1
+            }
+        }
+
+
+    } else {
+        Toast.makeText(applicationContext, "Init failed", Toast.LENGTH_SHORT).show()
     }
+
+    /*override fun onUtteranceCompleted(utteranceId: String?) {
+
+        textToSpeech.speak(
+            caller_name_label.text.toString(),
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            "repeat_caller_name"
+        )
+
+    }*/
 }
