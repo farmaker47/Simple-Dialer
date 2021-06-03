@@ -48,8 +48,8 @@ import kotlin.math.roundToInt
 
 
 class CallActivity : SimpleActivity(), TextToSpeech.OnInitListener {
-    private val CALL_NOTIFICATION_ID = 1
 
+    private val CALL_NOTIFICATION_ID = 1
     private var isSpeakerOn = false
     private var isMicrophoneOn = true
     private var isCallEnded = false
@@ -97,6 +97,13 @@ class CallActivity : SimpleActivity(), TextToSpeech.OnInitListener {
         textToSpeech = TextToSpeech(
             this, this
         )
+
+        // Ringtone for 2 seconds only
+        lifecycleScope.launch {
+            delay(4000L)
+
+            adjustAudio(true)
+        }
     }
 
     private fun observeViewmodel() {
@@ -491,6 +498,9 @@ class CallActivity : SimpleActivity(), TextToSpeech.OnInitListener {
             call_status_label.text = getString(R.string.call_ended)
             finish()
         }
+
+        // and restore AudioManager.STREAM_RING
+        adjustAudio(false)
     }
 
     private fun getCallTimerUpdateTask() = object : TimerTask() {
@@ -667,34 +677,38 @@ class CallActivity : SimpleActivity(), TextToSpeech.OnInitListener {
         val arrayOfStrings = arrayOf(
             caller_name_label.text.toString(),
             caller_name_label.text.toString(),
+            caller_name_label.text.toString(),
             caller_name_label.text.toString()
         )
-        var i = 0
-        for (name in arrayOfStrings) {
+
+        arrayOfStrings.forEach { name ->
 
             lifecycleScope.launch {
-                delay(3000L)
+                delay(5000L)
 
-                textToSpeech.speak(arrayOfStrings[i], TextToSpeech.QUEUE_ADD, null, null)
-                textToSpeech.playSilentUtterance(2000L, TextToSpeech.QUEUE_ADD, null);
+                textToSpeech.speak(name, TextToSpeech.QUEUE_ADD, null, null)
+                textToSpeech.playSilentUtterance(2000L, TextToSpeech.QUEUE_ADD, null)
 
-                i += 1
             }
         }
-
 
     } else {
         Toast.makeText(applicationContext, "Init failed", Toast.LENGTH_SHORT).show()
     }
 
-    /*override fun onUtteranceCompleted(utteranceId: String?) {
+    fun adjustAudio(setMute: Boolean) {
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        val adJustMute: Int = if (setMute) {
+            AudioManager.ADJUST_MUTE
+        } else {
+            AudioManager.ADJUST_UNMUTE
+        }
+        //audioManager.adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, adJustMute, 0)
+        //audioManager.adjustStreamVolume(AudioManager.STREAM_ALARM, adJustMute, 0)
+        //audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, adJustMute, 0)
+        audioManager.adjustStreamVolume(AudioManager.STREAM_RING, adJustMute, 0)
+        //audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, adJustMute, 0)
 
-        textToSpeech.speak(
-            caller_name_label.text.toString(),
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            "repeat_caller_name"
-        )
+    }
 
-    }*/
 }
